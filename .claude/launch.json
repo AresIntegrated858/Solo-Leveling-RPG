@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "preview",
+      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeArgs": ["preview/server.js"],
+      "port": 7654
+    }
+  ]
+}

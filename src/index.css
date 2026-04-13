@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #0a0a0f;
+    color: #c8c8d4;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f0f1a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a3a;
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4A90D9;
+  }
+}
+
+@layer components {
+  /* ── System Window Styles ─────────────────────────────────────────────── */
+  .system-window {
+    @apply border border-system-border bg-system-panel;
+    position: relative;
+  }
+  .system-window::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #4A90D9, transparent);
+  }
+
+  .system-header {
+    @apply font-mono text-system-gold text-xs tracking-widest uppercase;
+    border-bottom: 1px solid #1e1e2e;
+    padding: 6px 12px;
+    background: rgba(200, 169, 81, 0.05);
+  }
+
+  .stat-bar-track {
+    @apply w-full rounded-sm overflow-hidden;
+    height: 6px;
+    background: #1a1a2e;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── Narrative Text ───────────────────────────────────────────────────── */
+  .narrative-text {
+    @apply font-sans text-system-text leading-relaxed;
+    font-size: 0.9rem;
+  }
+
+  .system-block {
+    @apply font-mono text-xs;
+    border-left: 2px solid #4A90D9;
+    padding-left: 12px;
+    margin: 8px 0;
+    background: rgba(74, 144, 217, 0.04);
+    padding: 8px 12px;
+  }
+
+  .system-block-gold {
+    border-color: #C8A951;
+    background: rgba(200, 169, 81, 0.04);
+  }
+
+  .system-block-red {
+    border-color: #C0392B;
+    background: rgba(192, 57, 43, 0.04);
+  }
+
+  /* ── Input Styles ─────────────────────────────────────────────────────── */
+  .game-input {
+    @apply w-full bg-transparent font-mono text-sm text-system-text outline-none;
+    caret-color: #4A90D9;
+    resize: none;
+  }
+
+  .game-input::placeholder {
+    color: #3a3a4a;
+  }
+
+  /* ── Button Styles ────────────────────────────────────────────────────── */
+  .btn-system {
+    @apply font-mono text-xs tracking-wider uppercase px-4 py-2 border transition-all duration-200;
+    border-color: #2a2a3a;
+    color: #7a7a8a;
+  }
+  .btn-system:hover {
+    border-color: #4A90D9;
+    color: #4A90D9;
+    background: rgba(74, 144, 217, 0.08);
+  }
+
+  .btn-primary {
+    @apply font-mono text-xs tracking-wider uppercase px-4 py-2 border transition-all duration-200;
+    border-color: #4A90D9;
+    color: #4A90D9;
+    background: rgba(74, 144, 217, 0.1);
+  }
+  .btn-primary:hover {
+    background: rgba(74, 144, 217, 0.2);
+  }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-gold {
+    @apply font-mono text-xs tracking-wider uppercase px-4 py-2 border transition-all duration-200;
+    border-color: #C8A951;
+    color: #C8A951;
+    background: rgba(200, 169, 81, 0.1);
+  }
+  .btn-gold:hover {
+    background: rgba(200, 169, 81, 0.2);
+  }
+
+  .btn-danger {
+    @apply font-mono text-xs tracking-wider uppercase px-4 py-2 border transition-all duration-200;
+    border-color: #C0392B;
+    color: #C0392B;
+    background: rgba(192, 57, 43, 0.1);
+  }
+  .btn-danger:hover {
+    background: rgba(192, 57, 43, 0.2);
+  }
+
+  /* ── Pulse animation for processing indicator ─────────────────────────── */
+  .processing-pulse {
+    animation: processingPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes processingPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* ── Tab active state ─────────────────────────────────────────────────── */
+  .tab-active {
+    border-bottom: 2px solid #4A90D9;
+    color: #4A90D9;
+  }
+
+  /* ── Level up shimmer ─────────────────────────────────────────────────── */
+  @keyframes goldShimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  .gold-shimmer {
+    background: linear-gradient(90deg, #7a6530, #C8A951, #e8c97a, #C8A951, #7a6530);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: goldShimmer 3s linear infinite;
+  }
+}

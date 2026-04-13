@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(sw_vers)",
+      "Bash(xcode-select -p)",
+      "Bash(npm --version)",
+      "Bash(/usr/local/bin/node --version)",
+      "Bash(/usr/local/bin/npm --version)",
+      "Bash(export PATH=\"/usr/local/bin:$PATH\")",
+      "Bash(npm run:*)",
+      "Bash(timeout 8 npx electron .)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(echo \"DISPLAY: $DISPLAY\")",
+      "Bash(mkdir -p \"/Users/aresathletics/Desktop/Solo Leveling RPG.app/Contents/MacOS\")",
+      "Bash(mkdir -p \"/Users/aresathletics/Desktop/Solo Leveling RPG.app/Contents/Resources\")",
+      "Bash(chmod +x \"/Users/aresathletics/Desktop/Solo Leveling RPG.app/Contents/MacOS/launcher\")",
+      "Bash(open \"/Users/aresathletics/Desktop/Solo Leveling RPG.app\")",
+      "Bash(find /private/tmp -name *.png -o -name *.jpg -o -name *.jpeg -o -name *.webp)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx --version)",
+      "Bash(export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\")",
+      "Bash(ls /usr/local/bin/python*)",
+      "Bash(ls /opt/homebrew/bin/python*)",
+      "Bash(pkill -f \"node.*7654\")",
+      "Bash(curl -s http://localhost:7654/)",
+      "Bash(sips -s format png \"/Users/aresathletics/Downloads/untitled-bab2af58203062e21e98c88b08cd75b5.avif\" --out /tmp/shadow_ref.png)",
+      "Read(//tmp/**)",
+      "Bash(/usr/local/bin/npm run:*)",
+      "Bash(ls /usr/local/bin/node*)",
+      "Bash(ls /opt/homebrew/bin/node*)",
+      "Bash(ls ~/.nvm/versions/node/*/bin/node)",
+      "Bash(/usr/local/bin/node /usr/local/bin/npm run build)",
+      "Bash(ls /usr/local/bin/webpack*)",
+      "Bash(/usr/local/bin/node node_modules/.bin/webpack --mode production)",
+      "Read(//Users/aresathletics/Downloads/**)",
+      "Bash(find '/Users/aresathletics/Downloads/Solo Leveling RPG/src' -type f \\\\\\(-name *.js -o -name *.jsx \\\\\\))",
+      "Bash(wc -l /Users/aresathletics/Downloads/\"Solo Leveling RPG\"/src/components/*.jsx)",
+      "Bash(gh auth:*)",
+      "Bash(git --version)"
+    ]
+  }
+}

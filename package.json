@@ -1,0 +1,56 @@
+{
+  "name": "solo-leveling-rpg",
+  "version": "1.0.0",
+  "description": "Solo Leveling RPG — Hunter Simulation System",
+  "main": "main.js",
+  "scripts": {
+    "start": "concurrently \"npm run build:watch\" \"wait-on dist/bundle.js && electron .\"",
+    "build": "webpack --mode production",
+    "build:watch": "webpack --mode development --watch",
+    "build:prod": "webpack --mode production && electron-builder",
+    "electron": "electron ."
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@babel/preset-react": "^7.23.3",
+    "autoprefixer": "^10.4.19",
+    "babel-loader": "^9.1.3",
+    "concurrently": "^8.2.2",
+    "css-loader": "^7.1.1",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "mini-css-extract-plugin": "^2.9.0",
+    "postcss": "^8.4.38",
+    "postcss-loader": "^8.1.1",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.3",
+    "wait-on": "^7.2.0",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "build": {
+    "appId": "com.solo-leveling.rpg",
+    "productName": "Solo Leveling RPG",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js",
+      "src/index.html",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.games"
+    }
+  }
+}
