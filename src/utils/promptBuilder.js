@@ -39,7 +39,18 @@ export function buildSessionContext(saveData) {
     worldEvents,
     quests,
     npcs,
+    shadowArmy,
+    economy,
+    cityState,
+    market,
+    rivalHunter,
+    hunterRegistry,
     latestSave,
+    newsFeed,
+    codex,
+    bestiary,
+    gateRecords,
+    achievements,
   } = saveData;
 
   const lines = ['[ SESSION RESUME CONTEXT ]'];
@@ -145,6 +156,158 @@ export function buildSessionContext(saveData) {
     lines.push(`- Civilian Public: ${playerState.reputation.civilianPublic || '—'}`);
   }
 
+  // Shadow Army — include full roster in session resume
+  if (shadowArmy && shadowArmy.length > 0) {
+    lines.push('');
+    lines.push('[ SHADOW ARMY ]');
+    const unlocked = playerState?.shadowProtocolUnlocked;
+    lines.push(`Protocol: ${unlocked ? 'UNLOCKED' : 'LOCKED'}`);
+    const intStat = playerState?.stats?.INT || 10;
+    const maxDomain = intStat >= 100 ? 25 : intStat >= 85 ? 18 : intStat >= 60 ? 13
+      : intStat >= 40 ? 9 : intStat >= 25 ? 6 : intStat >= 15 ? 4 : 2;
+    const activeShadows = shadowArmy.filter((s) => s.status !== 'lost');
+    const lostShadows   = shadowArmy.filter((s) => s.status === 'lost');
+    lines.push(`DOMAIN: ${activeShadows.filter(s => s.deploymentState !== 'standby').length} / ${maxDomain}`);
+    activeShadows.forEach((s) => {
+      const tierLabel = s.isGeneral ? '[GENERAL]' : '[ARMY]';
+      lines.push(`- ${tierLabel} ${s.name} (${s.grade}) | ${s.deploymentState} | ${s.personality || 'personality unknown'} | Kills: ${s.killCount || 0}`);
+      if (s.assignedTask) lines.push(`  Task: ${s.assignedTask}`);
+    });
+    if (lostShadows.length > 0) {
+      lines.push(`Fallen: ${lostShadows.map(s => s.name).join(', ')}`);
+    }
+  }
+
+  // Phase 3 — Economy
+  if (economy) {
+    lines.push('');
+    lines.push('[ ECONOMY ]');
+    const cash = inventory?.currency?.cash ?? 0;
+    lines.push(`Cash on hand: ${cash.toLocaleString()} won`);
+    const exp = economy.expenses || {};
+    const parts = [];
+    if (exp.rent) parts.push(`Rent: ${exp.rent.toLocaleString()}/month`);
+    if (exp.associationLicense) parts.push(`License: ${exp.associationLicense.toLocaleString()}/month`);
+    if (parts.length > 0) lines.push(`Expenses: ${parts.join(', ')}`);
+    if (economy.activeContracts?.length > 0) {
+      lines.push(`Active Contracts: ${economy.activeContracts.map((c) => `${c.name}(${c.rank})`).join(', ')}`);
+    }
+  }
+
+  // Phase 3 — City State
+  if (cityState) {
+    lines.push('');
+    lines.push('[ CITY STATE ]');
+    lines.push(`Danger Level: ${cityState.dangerLevel || 'Low'}`);
+    if (cityState.zones?.length > 0) {
+      cityState.zones.forEach((z) => lines.push(`- Zone ${z.name}: ${z.status}`));
+    }
+    const activeOverflow = (cityState.overflowEvents || []).filter((e) => e.status === 'active');
+    if (activeOverflow.length > 0) {
+      lines.push(`Active Overflow Events: ${activeOverflow.map((e) => e.zone).join(', ')}`);
+    }
+  }
+
+  // Phase 3 — Market
+  if (market?.stonePrices) {
+    lines.push('');
+    lines.push('[ MARKET PRICES ]');
+    const trends = market.trend || {};
+    ['E','D','C','B','A','S'].forEach((rank) => {
+      const price = market.stonePrices[rank];
+      const trend = trends[rank] || 'stable';
+      if (price) lines.push(`- ${rank}-rank stone: ~${price.toLocaleString()} won (${trend})`);
+    });
+  }
+
+  // Phase 3 — Rival Hunter
+  if (rivalHunter?.name) {
+    lines.push('');
+    lines.push('[ RIVAL HUNTER ]');
+    lines.push(`Name: ${rivalHunter.name} | Rank: ${rivalHunter.rank || '?'} | Last Seen: ${rivalHunter.lastSeen || 'Unknown'}`);
+  }
+
+  // Phase 4 — Recent News Feed
+  if (newsFeed && newsFeed.length > 0) {
+    lines.push('');
+    lines.push('[ RECENT NEWS ]');
+    newsFeed.slice(-5).forEach((n) => {
+      lines.push(`- [${n.source}] ${n.headline}`);
+    });
+  }
+
+  // Phase 4 — Codex (last 5 entries)
+  if (codex && codex.length > 0) {
+    lines.push('');
+    lines.push('[ CODEX ENTRIES ]');
+    codex.slice(-5).forEach((c) => {
+      lines.push(`- [${c.category.toUpperCase()}] ${c.title}: ${c.entry}`);
+    });
+  }
+
+  // Phase 4 — Player Legend
+  const legendEntries = playerState?.legendEntries || [];
+  if (legendEntries.length > 0) {
+    lines.push('');
+    lines.push('[ PLAYER LEGEND ]');
+    legendEntries.slice(-3).forEach((l) => {
+      lines.push(`- ${l.entry}`);
+    });
+  }
+
+  // Phase 4 — Belief Shifts
+  const beliefShifts = playerState?.beliefShifts || [];
+  if (beliefShifts.length > 0) {
+    lines.push('');
+    lines.push('[ BELIEF SHIFTS ]');
+    beliefShifts.slice(-3).forEach((b) => {
+      lines.push(`- ${b.shift}${b.tone ? ` [${b.tone}]` : ''}`);
+    });
+  }
+
+  // Phase 5 — Gate Records (first clears)
+  const firstClears = (gateRecords || []).filter((r) => r.isFirstClear && r.clearedBy === 'player');
+  if (firstClears.length > 0) {
+    lines.push('');
+    lines.push('[ GATE RECORDS — FIRST CLEARS ]');
+    firstClears.slice(-5).forEach((r) => {
+      lines.push(`- ${r.name} (${r.rank}-rank) — ${r.location}${r.bonus ? ` | Bonus: ${r.bonus}` : ''}`);
+    });
+  }
+
+  // Phase 5 — Bestiary Summary
+  const bestiaryObj = bestiary || {};
+  const knownTypes = Object.keys(bestiaryObj).length;
+  if (knownTypes > 0) {
+    lines.push('');
+    lines.push('[ BESTIARY ]');
+    lines.push(`${knownTypes} monster type${knownTypes === 1 ? '' : 's'} catalogued.`);
+    const sorted = Object.values(bestiaryObj).sort((a, b) => (b.killCount || 0) - (a.killCount || 0));
+    sorted.slice(0, 3).forEach((m) => {
+      if (m.killCount > 0) {
+        lines.push(`- ${m.name} (${m.rank}-rank): ${m.killCount} kills${m.weaknesses ? ` | Weak: ${m.weaknesses}` : ''}`);
+      }
+    });
+  }
+
+  // Phase 6 — Achievements (last 5)
+  const recentAchievements = (achievements || []).slice(-5);
+  if (recentAchievements.length > 0) {
+    lines.push('');
+    lines.push('[ ACHIEVEMENTS ]');
+    recentAchievements.forEach((a) => {
+      lines.push(`- [${(a.category || 'unique').toUpperCase()}] ${a.title}: ${a.description}`);
+    });
+  }
+
+  // Phase 6 — System Tier
+  const resumeTier = playerState?.systemTier || 1;
+  if (resumeTier > 1) {
+    lines.push('');
+    lines.push(`[ SYSTEM TIER: ${resumeTier} ]`);
+    lines.push(`System is operating at Tier ${resumeTier}. Do not output [ SYSTEM TIER UNLOCK ] for tiers ≤ ${resumeTier}.`);
+  }
+
   lines.push('');
   lines.push('[ LAST KNOWN NARRATIVE POSITION ]');
   lines.push(latestSave?.narrativeSummary || 'No summary available. Resume from last known state.');
@@ -208,7 +371,187 @@ export function buildStateAnchor(gameState) {
     lines.push(`Known NPCs: ${knownNPCs}`);
   }
 
-  lines.push('REQUIRED THIS TURN: Output [ SYSTEM STATUS WINDOW ] after any stat change. Output [ NPC UPDATE ] for EVERY named character who appears or speaks — use "Newly Met" for first encounters. Never skip NPC tracking.');
+  // ── Shadow Army — full DOMAIN + deployment state anchor ─────────────────────
+  const allShadows = gameState.shadowArmy || [];
+  const activeShadows = allShadows.filter((s) => s.status !== 'lost');
+  const lostShadows   = allShadows.filter((s) => s.status === 'lost');
+
+  if (allShadows.length > 0 || gameState.playerState?.shadowProtocolUnlocked) {
+    const intStat = gameState.playerState?.stats?.INT || 10;
+    // Compute max capacity inline (mirrors shadowCapacityFromINT)
+    const maxDomain = intStat >= 100 ? 25 : intStat >= 85 ? 18 : intStat >= 60 ? 13
+      : intStat >= 40 ? 9 : intStat >= 25 ? 6 : intStat >= 15 ? 4 : 2;
+    const deployedCount = activeShadows.filter(
+      (s) => s.deploymentState === 'deployed' || s.deploymentState === 'assigned',
+    ).length;
+
+    lines.push(`SHADOW DOMAIN: ${deployedCount} / ${maxDomain}  |  Protocol: ${gameState.playerState?.shadowProtocolUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
+
+    // GENERALS — full detail line per General
+    const generals = activeShadows.filter((s) => s.isGeneral);
+    if (generals.length > 0) {
+      lines.push('Generals:');
+      generals.forEach((s) => {
+        const pers = s.personality ? ` [${s.personality}]` : '';
+        const task = s.deploymentState === 'assigned' ? ` → Task: ${s.assignedTask}` : '';
+        const deploy = s.deploymentState !== 'standby' ? ` (${s.deploymentState})` : '';
+        lines.push(`  ${s.name}(${s.grade})${pers}${deploy}${task}`);
+      });
+    }
+
+    // ARMY — compact by type, grouped
+    const armyUnits = activeShadows.filter((s) => !s.isGeneral);
+    if (armyUnits.length > 0) {
+      // Group by name/type
+      const grouped = {};
+      armyUnits.forEach((s) => {
+        const key = `${s.name}|${s.grade}|${s.deploymentState}`;
+        if (!grouped[key]) grouped[key] = { name: s.name, grade: s.grade, deploymentState: s.deploymentState, count: 0 };
+        grouped[key].count += s.armyCount || 1;
+      });
+      const armyLine = Object.values(grouped)
+        .map((g) => `${g.name}×${g.count}(${g.grade}${g.deploymentState !== 'standby' ? ','+g.deploymentState : ''})`)
+        .join(', ');
+      lines.push(`Army: ${armyLine}`);
+    }
+
+    // FALLEN — brief count
+    if (lostShadows.length > 0) {
+      lines.push(`Fallen: ${lostShadows.map((s) => s.name).join(', ')}`);
+    }
+
+    if (activeShadows.length === 0) {
+      lines.push('No active shadows.');
+    }
+
+    // Extraction instructions reminder
+    if (gameState.playerState?.shadowProtocolUnlocked) {
+      lines.push('Shadow protocol ACTIVE — output [ SHADOW EXTRACTION AVAILABLE ] after every personal kill. One attempt per entity. Output [ SHADOW COMMAND RESULT ] when commanded.');
+    }
+  }
+
+  // ── Phase 3 — Economy ────────────────────────────────────────────────────────
+  const economy = gameState.economy;
+  if (economy) {
+    const inv = gameState.inventory;
+    const cash = inv?.currency?.cash ?? 0;
+    const cashFmt = cash >= 1000000
+      ? `${(cash / 1000000).toFixed(1)}M won`
+      : cash >= 1000
+        ? `${(cash / 1000).toFixed(0)}K won`
+        : `${cash} won`;
+    lines.push(`Cash on hand: ${cashFmt}`);
+    const exp = economy.expenses || {};
+    const monthlyBurn = (exp.rent || 0) + (exp.associationLicense || 0);
+    if (monthlyBurn > 0) {
+      lines.push(`Monthly expenses: ~${(monthlyBurn / 1000).toFixed(0)}K won (rent + license)`);
+    }
+    if (economy.activeContracts?.length > 0) {
+      const names = economy.activeContracts.slice(0, 2).map((c) => `${c.name}(${c.rank}, ${c.reward ? `${(c.reward/1000).toFixed(0)}K won` : '?'})`).join(', ');
+      lines.push(`Active contracts: ${names}`);
+    }
+  }
+
+  // ── Phase 3 — City State ──────────────────────────────────────────────────────
+  const cityState = gameState.cityState;
+  if (cityState && (cityState.dangerLevel !== 'Low' || cityState.zones?.length > 0)) {
+    lines.push(`City danger: ${cityState.dangerLevel || 'Low'}`);
+    if (cityState.zones?.length > 0) {
+      const disrupted = cityState.zones.filter((z) => z.status !== 'Safe');
+      if (disrupted.length > 0) {
+        lines.push(`Disrupted zones: ${disrupted.map((z) => `${z.name}(${z.status})`).join(', ')}`);
+      }
+    }
+    if (cityState.overflowEvents?.some((e) => e.status === 'active')) {
+      lines.push('⚠ ACTIVE OVERFLOW EVENT in city — civilians at risk.');
+    }
+  }
+
+  // ── Phase 3 — Market ──────────────────────────────────────────────────────────
+  const market = gameState.market;
+  if (market) {
+    const trends = market.trend || {};
+    const moving = Object.entries(trends)
+      .filter(([, t]) => t !== 'stable')
+      .map(([rank, t]) => `${rank}:${t === 'rising' ? '↑' : '↓'}`);
+    if (moving.length > 0) {
+      lines.push(`Stone market: ${moving.join(' ')}`);
+    }
+  }
+
+  // ── Phase 3 — Rival Hunter ────────────────────────────────────────────────────
+  const rival = gameState.rivalHunter;
+  if (rival?.name) {
+    lines.push(`Rival: ${rival.name} (Rank ${rival.rank || '?'}) — last seen: ${rival.lastSeen || 'unknown'}`);
+  }
+
+  // ── Phase 3 — Fear Index reminder (hidden — drives NPC behavior) ─────────────
+  const fearIdx = gameState.playerState?.fearIndex || 0;
+  if (fearIdx > 20) {
+    lines.push(`Fear Index: ${fearIdx}/100 — adjust NPC wariness accordingly.`);
+  }
+
+  // ── Phase 4 — Story Architecture ─────────────────────────────────────────────
+  const answers = gameState.characterAnswers || {};
+  if (answers.q4 || answers.q10 || answers.q7) {
+    lines.push('[ HUNTER PROFILE ]');
+    if (answers.q4) lines.push(`Background: ${answers.q4}`);
+    if (answers.q7) lines.push(`Moral line: ${answers.q7}`);
+    if (answers.q10) lines.push(`Short-term drive: ${answers.q10}`);
+    if (answers.q11) lines.push(`Long-term goal: ${answers.q11}`);
+  }
+
+  const legendEntries = gameState.playerState?.legendEntries || [];
+  if (legendEntries.length > 0) {
+    const recent = legendEntries.slice(-2).map((e) => e.entry).join(' / ');
+    lines.push(`Legend: ${recent}`);
+  }
+
+  const truthDrip = gameState.playerState?.truthDripCount || 0;
+  if (truthDrip > 0) {
+    lines.push(`Truth Drips fired: ${truthDrip} — do NOT repeat observations already revealed.`);
+  }
+
+  // ── Phase 6 — System Tier ────────────────────────────────────────────────────
+  const systemTier = gameState.playerState?.systemTier || 1;
+  if (systemTier > 1) {
+    lines.push(`System Tier: ${systemTier}`);
+  }
+
+  // ── Phase 6 — Stat Milestones (already achieved — do not repeat) ─────────────
+  const statMilestones = gameState.playerState?.statMilestones || [];
+  if (statMilestones.length > 0) {
+    const milestoneList = statMilestones.map((m) => `${m.stat}≥${m.value}`).join(', ');
+    lines.push(`Achieved stat milestones: ${milestoneList} — DO NOT fire [ STAT MILESTONE ] for these again.`);
+  }
+
+  // ── Phase 6 — Title Passives ──────────────────────────────────────────────────
+  const titlePassives = gameState.playerState?.titlePassives || {};
+  const passiveEntries = Object.entries(titlePassives);
+  if (passiveEntries.length > 0) {
+    const passiveStr = passiveEntries.map(([t, p]) => `"${t}": ${p}`).join(' | ');
+    lines.push(`Title passives active: ${passiveStr}`);
+  }
+
+  // ── Phase 5 — Gear Aesthetic ─────────────────────────────────────────────────
+  const gearAesthetic = gameState.playerState?.gearAesthetic;
+  if (gearAesthetic) {
+    lines.push(`Combat Aesthetic: ${gearAesthetic}`);
+  }
+
+  // ── Phase 5 — Active Set Bonuses ─────────────────────────────────────────────
+  const activeSets = gameState.playerState?.activeSetBonuses || [];
+  if (activeSets.length > 0) {
+    lines.push(`Active Set Bonuses: ${activeSets.map((s) => `${s.setName}(${s.bonus})`).join(', ')}`);
+  }
+
+  // ── Phase 5 — Bestiary (known count) ─────────────────────────────────────────
+  const knownMonsterCount = Object.keys(gameState.bestiary || {}).length;
+  if (knownMonsterCount > 0) {
+    lines.push(`Bestiary: ${knownMonsterCount} monster type${knownMonsterCount === 1 ? '' : 's'} catalogued.`);
+  }
+
+  lines.push('REQUIRED EVERY TURN: [ SYSTEM STATUS WINDOW ] with current HP/MP/Stamina/XP/stats/inventory/currency — the panels read state ONLY from this block, never skip it. Output [ LOOT ] after any combat or scavenge. Output [ QUEST LOG ] when objectives shift. Output [ NPC UPDATE ] when a named character first appears or a relationship changes. Output [ CITY UPDATE ] when city zones or danger level change. Output [ RIVAL SIGHTING ] when the rival appears. Keep narrative to 2–3 short paragraphs. Keep choices to 2–3 short options. No padding.');
   lines.push('Maintain established tone, lore, character voice, and all canon facts.');
 
   return lines.join('\n');

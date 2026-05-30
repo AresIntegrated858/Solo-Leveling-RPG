@@ -44,13 +44,13 @@ export default function SetupScreen({ onSubmit }) {
             <div className="system-header -mx-4 -mt-4 mb-3">API KEY CONFIGURATION</div>
 
             <div className="font-mono text-xs text-system-text-dim space-y-1">
-              <p>To initialize the simulation, provide your Anthropic API key.</p>
+              <p>To initialize the simulation, provide your OpenAI API key.</p>
               <p>The key is stored securely on your local machine and never transmitted elsewhere.</p>
             </div>
 
             <div className="space-y-2">
               <label className="font-mono text-xs text-system-text-dim block">
-                ANTHROPIC API KEY
+                OPENAI API KEY
               </label>
               <div className="relative flex items-center border border-system-border bg-system-bg">
                 <input
@@ -58,7 +58,7 @@ export default function SetupScreen({ onSubmit }) {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   className="flex-1 bg-transparent font-mono text-sm text-system-text outline-none px-3 py-2 pr-10"
-                  placeholder="sk-ant-..."
+                  placeholder="sk-..."
                   autoComplete="off"
                   spellCheck={false}
                   autoFocus

@@ -21,7 +21,8 @@ module.exports = {
       },
       fontFamily: {
         mono: ['"JetBrains Mono"', '"Fira Code"', '"Courier New"', 'monospace'],
-        sans: ['"Inter"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        sans: ['"Rajdhani"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        display: ['"Orbitron"', '"Rajdhani"', 'system-ui', 'sans-serif'],
       },
       animation: {
         'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',

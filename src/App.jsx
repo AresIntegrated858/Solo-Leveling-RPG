@@ -33,7 +33,10 @@ export default function App() {
   useEffect(() => {
     async function boot() {
       const storedKey = await window.electronAPI.store.get('apiKey');
-      if (!storedKey) {
+      // Anthropic keys start with "sk-ant-" — clear them so the user can enter an OpenAI key
+      const isAnthropicKey = storedKey && storedKey.startsWith('sk-ant-');
+      if (!storedKey || isAnthropicKey) {
+        if (isAnthropicKey) await window.electronAPI.store.set('apiKey', '');
         setScreen(SCREEN.SETUP);
         return;
       }
@@ -118,7 +121,7 @@ export default function App() {
   }, [saveData, gameState]);
 
   // Receive completed character data and load full saved state (including hometownCoords)
-  const handleCharacterCreationComplete = useCallback(async (answers, initialHistory, initialResponse) => {
+  const handleCharacterCreationComplete = useCallback(async (answers, initialHistory, initialResponse, extras = {}) => {
     gameState.setCharacterData(answers);
 
     // Load the initial Claude exchange into conversation history
@@ -134,15 +137,26 @@ export default function App() {
     }
 
     // Re-load the full saved playerState from disk so hometownCoords (geocoded
-    // during character creation) makes it into the live game state.
-    // Merge onto the already-updated playerState so we don't overwrite parsed stats.
+    // during character creation) and the generated portrait both make it into
+    // the live game state. Merge onto the already-updated playerState so we
+    // don't overwrite parsed stats.
     try {
       const saved = await loadAll();
-      if (saved?.playerState?.hometownCoords) {
+      const savedP = saved?.playerState;
+      if (savedP) {
         gameState.setPlayerState((prev) => ({
           ...prev,
-          hometownCoords: saved.playerState.hometownCoords,
-          currentCoords: saved.playerState.hometownCoords,
+          hometownCoords: savedP.hometownCoords ?? prev.hometownCoords,
+          currentCoords: savedP.hometownCoords ?? prev.currentCoords,
+          portrait: savedP.portrait || extras.portrait || prev.portrait || '',
+          appearance: savedP.appearance || extras.appearance || prev.appearance || '',
+        }));
+      } else if (extras.portrait || extras.appearance) {
+        // Fallback if disk read failed but creation passed extras through
+        gameState.setPlayerState((prev) => ({
+          ...prev,
+          portrait: extras.portrait || prev.portrait || '',
+          appearance: extras.appearance || prev.appearance || '',
         }));
       }
     } catch (e) {

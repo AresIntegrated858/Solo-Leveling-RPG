@@ -1,13 +1,49 @@
-// useClaudeAPI — streaming Claude API integration
+// useClaudeAPI — streaming OpenAI Chat Completions integration
+// (Hook name preserved for backward compatibility with existing imports.)
 // Makes direct fetch calls from the renderer (no CORS in Electron)
-// Injects full master prompt as system message on every call
+// Injects full master prompt as the system message on every call.
 
 import { useState, useCallback, useRef } from 'react';
 import MASTER_PROMPT from '../constants/masterPrompt';
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
-const MAX_TOKENS = 1500;
+const API_URL = 'https://api.openai.com/v1/chat/completions';
+const MODEL = 'gpt-4o';
+const MAX_TOKENS = 4000;
+
+// Convert Anthropic-style messages (string or content-block array) to OpenAI string content.
+function flattenContent(content) {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((b) => (typeof b === 'string' ? b : b?.text || ''))
+      .join('');
+  }
+  return String(content ?? '');
+}
+
+function toOpenAIMessages(messages) {
+  return [
+    { role: 'system', content: MASTER_PROMPT },
+    ...messages.map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: flattenContent(m.content),
+    })),
+  ];
+}
+
+// Retry on transient overload (429/503) with exponential backoff.
+async function fetchWithRetry(url, options, maxRetries = 4) {
+  let delay = 3000;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status !== 429 && response.status !== 503) return response;
+    if (attempt < maxRetries) {
+      await new Promise((res) => setTimeout(res, delay));
+      delay = Math.min(delay * 2, 30000);
+    }
+  }
+  return fetch(url, options);
+}
 
 export function useClaudeAPI() {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -35,19 +71,16 @@ export function useClaudeAPI() {
     abortRef.current = controller;
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetchWithRetry(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: MODEL,
           max_tokens: MAX_TOKENS,
-          system: MASTER_PROMPT,
-          messages,
+          messages: toOpenAIMessages(messages),
           stream: true,
         }),
         signal: controller.signal,
@@ -79,8 +112,8 @@ export function useClaudeAPI() {
 
           try {
             const event = JSON.parse(data);
-            if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-              const chunk = event.delta.text;
+            const chunk = event?.choices?.[0]?.delta?.content;
+            if (chunk) {
               fullText += chunk;
               onChunk?.(chunk, fullText);
             }
@@ -94,6 +127,7 @@ export function useClaudeAPI() {
     } catch (err) {
       if (err.name === 'AbortError') return;
       const msg = err.message || 'Unknown error';
+      console.error('OpenAI stream error:', msg);
       setError(msg);
       onError?.(msg);
     } finally {
@@ -107,23 +141,40 @@ export function useClaudeAPI() {
     setIsStreaming(false);
   }, []);
 
-  // Non-streaming call — used for API key validation and character creation init
-  const send = useCallback(async ({ apiKey, messages, maxTokens }) => {
+  // Non-streaming call — used for character creation init and portrait generation.
+  // systemPrompt: undefined → use MASTER_PROMPT (default for game calls)
+  //               null      → no system message (e.g. self-contained prompts)
+  //               string    → use that string as the system message
+  const send = useCallback(async ({ apiKey, messages, maxTokens, systemPrompt }) => {
     if (!apiKey) throw new Error('No API key configured.');
 
-    const response = await fetch(API_URL, {
+    let openAIMessages;
+    if (systemPrompt === null) {
+      // No system message — the prompt is fully contained in the user message
+      openAIMessages = messages.map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: flattenContent(m.content),
+      }));
+    } else {
+      openAIMessages = [
+        { role: 'system', content: systemPrompt !== undefined ? systemPrompt : MASTER_PROMPT },
+        ...messages.map((m) => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: flattenContent(m.content),
+        })),
+      ];
+    }
+
+    const response = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: maxTokens || MAX_TOKENS,
-        system: MASTER_PROMPT,
-        messages,
+        messages: openAIMessages,
       }),
     });
 
@@ -133,7 +184,7 @@ export function useClaudeAPI() {
     }
 
     const data = await response.json();
-    return data.content?.[0]?.text || '';
+    return data?.choices?.[0]?.message?.content || '';
   }, []);
 
   // API key validation ping
@@ -143,18 +194,17 @@ export function useClaudeAPI() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 5,
-          system: 'You are a test.',
-          messages: [{ role: 'user', content: 'ping' }],
+          messages: [
+            { role: 'system', content: 'You are a test.' },
+            { role: 'user', content: 'ping' },
+          ],
         }),
       });
-      // If we get a 4xx other than auth error, key format might be ok
       return true;
     } catch (err) {
       return false;
@@ -167,21 +217,22 @@ export function useClaudeAPI() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 5,
-          system: 'Respond only with: OK',
-          messages: [{ role: 'user', content: 'ping' }],
+          messages: [
+            { role: 'system', content: 'Respond only with: OK' },
+            { role: 'user', content: 'ping' },
+          ],
         }),
       });
 
       if (response.status === 401) return { valid: false, error: 'Invalid API key.' };
       if (response.status === 403) return { valid: false, error: 'Unauthorized. Check your API key permissions.' };
-      if (!response.ok && response.status !== 529) {
+      if (response.status === 404) return { valid: false, error: `Model "${MODEL}" not available on this key.` };
+      if (!response.ok && response.status !== 429 && response.status !== 503) {
         return { valid: false, error: `API returned status ${response.status}.` };
       }
       return { valid: true };
@@ -190,5 +241,36 @@ export function useClaudeAPI() {
     }
   }, []);
 
-  return { stream, send, abort, isStreaming, error, validateKeyStrict };
+  // DALL-E 3 image generation — returns a base64 data URL (data:image/png;base64,...)
+  const generateImage = useCallback(async ({ apiKey, prompt }) => {
+    if (!apiKey) throw new Error('No API key configured.');
+
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'hd',
+        response_format: 'b64_json',
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body?.error?.message || `Image API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) throw new Error('No image data returned from DALL-E.');
+    return `data:image/png;base64,${b64}`;
+  }, []);
+
+  return { stream, send, abort, isStreaming, error, validateKeyStrict, generateImage };
 }

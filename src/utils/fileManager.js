@@ -112,12 +112,116 @@ export async function loadNPCs() {
   return readJSON('npcs.json') || [];
 }
 
+export async function saveDailyQuests(dq) {
+  return writeJSON('daily_quests.json', dq);
+}
+
+export async function loadDailyQuests() {
+  return readJSON('daily_quests.json');
+}
+
+export async function saveShadowArmy(army) {
+  return writeJSON('shadow_army.json', army);
+}
+
+export async function loadShadowArmy() {
+  return readJSON('shadow_army.json') || [];
+}
+
+// ─── Phase 3 — Living World & Economy ────────────────────────────────────────
+
+export async function saveEconomy(economy) {
+  return writeJSON('economy.json', economy);
+}
+
+export async function loadEconomy() {
+  return readJSON('economy.json');
+}
+
+export async function saveCityState(cityState) {
+  return writeJSON('city_state.json', cityState);
+}
+
+export async function loadCityState() {
+  return readJSON('city_state.json');
+}
+
+export async function saveMarket(market) {
+  return writeJSON('market.json', market);
+}
+
+export async function loadMarket() {
+  return readJSON('market.json');
+}
+
+export async function saveRivalHunter(rival) {
+  return writeJSON('rival_hunter.json', rival);
+}
+
+export async function loadRivalHunter() {
+  return readJSON('rival_hunter.json');
+}
+
+export async function saveHunterRegistry(registry) {
+  return writeJSON('hunter_registry.json', registry);
+}
+
+export async function loadHunterRegistry() {
+  return readJSON('hunter_registry.json') || [];
+}
+
 export async function saveLevelHistory(history) {
   return writeJSON('level_history.json', history);
 }
 
 export async function loadLevelHistory() {
   return readJSON('level_history.json') || [];
+}
+
+// ─── Phase 6 — Progression & System Depth ────────────────────────────────────
+
+export async function saveAchievements(achievements) {
+  return writeJSON('achievements.json', achievements);
+}
+
+export async function loadAchievements() {
+  return readJSON('achievements.json') || [];
+}
+
+// ─── Phase 5 — Loot, Gear & Combat Depth ─────────────────────────────────────
+
+export async function saveBestiary(bestiary) {
+  return writeJSON('bestiary.json', bestiary);
+}
+
+export async function loadBestiary() {
+  return readJSON('bestiary.json') || {};
+}
+
+export async function saveGateRecords(records) {
+  return writeJSON('gate_records.json', records);
+}
+
+export async function loadGateRecords() {
+  return readJSON('gate_records.json') || [];
+}
+
+// ─── Phase 4 — Story Architecture ────────────────────────────────────────────
+
+export async function saveNewsFeed(feed) {
+  return writeJSON('news_feed.json', feed);
+}
+
+export async function loadNewsFeed() {
+  return readJSON('news_feed.json') || [];
+}
+
+export async function saveCodex(codex) {
+  return writeJSON('codex.json', codex);
+}
+
+export async function loadCodex() {
+  return readJSON('codex.json') || [];
 }
 
 export async function saveSessionMeta(meta) {
@@ -189,7 +293,19 @@ export async function saveAll(gameState) {
     characterAnswers,
     quests,
     npcs,
+    dailyQuests,
+    shadowArmy,
+    economy,
+    cityState,
+    market,
+    rivalHunter,
+    hunterRegistry,
     narrativeSummary,
+    newsFeed,
+    codex,
+    bestiary,
+    gateRecords,
+    achievements,
   } = gameState;
 
   await Promise.all([
@@ -205,6 +321,18 @@ export async function saveAll(gameState) {
     characterAnswers && saveCharacterAnswers(characterAnswers),
     quests && saveQuests(quests),
     npcs && saveNPCs(npcs),
+    dailyQuests && saveDailyQuests(dailyQuests),
+    shadowArmy && saveShadowArmy(shadowArmy),
+    economy && saveEconomy(economy),
+    cityState && saveCityState(cityState),
+    market && saveMarket(market),
+    rivalHunter !== undefined && saveRivalHunter(rivalHunter),
+    hunterRegistry && saveHunterRegistry(hunterRegistry),
+    newsFeed && saveNewsFeed(newsFeed),
+    codex && saveCodex(codex),
+    bestiary && saveBestiary(bestiary),
+    gateRecords && saveGateRecords(gateRecords),
+    achievements && saveAchievements(achievements),
   ].filter(Boolean));
 
   await saveLatestSave({
@@ -239,6 +367,18 @@ export async function loadAll() {
     quests,
     npcs,
     latestSave,
+    dailyQuests,
+    shadowArmy,
+    economy,
+    cityState,
+    market,
+    rivalHunter,
+    hunterRegistry,
+    newsFeed,
+    codex,
+    bestiary,
+    gateRecords,
+    achievements,
   ] = await Promise.all([
     loadPlayerState(),
     loadSkills(),
@@ -253,6 +393,18 @@ export async function loadAll() {
     loadQuests(),
     loadNPCs(),
     loadLatestSave(),
+    loadDailyQuests(),
+    loadShadowArmy(),
+    loadEconomy(),
+    loadCityState(),
+    loadMarket(),
+    loadRivalHunter(),
+    loadHunterRegistry(),
+    loadNewsFeed(),
+    loadCodex(),
+    loadBestiary(),
+    loadGateRecords(),
+    loadAchievements(),
   ]);
 
   return {
@@ -269,6 +421,18 @@ export async function loadAll() {
     quests,
     npcs,
     latestSave,
+    dailyQuests,
+    shadowArmy,
+    economy,
+    cityState,
+    market,
+    rivalHunter,
+    hunterRegistry,
+    newsFeed,
+    codex,
+    bestiary,
+    gateRecords,
+    achievements,
   };
 }
 
@@ -309,6 +473,13 @@ export async function clearSaveData() {
     'quests.json',
     'npcs.json',
     'latest_save.json',
+    'daily_quests.json',
+    'shadow_army.json',
+    'news_feed.json',
+    'codex.json',
+    'bestiary.json',
+    'gate_records.json',
+    'achievements.json',
   ];
   await Promise.all(files.map((f) => api.fs.delete(joinPath(dir, f))));
 }

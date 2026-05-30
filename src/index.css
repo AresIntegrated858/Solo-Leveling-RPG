@@ -10,7 +10,9 @@
   body {
     background-color: #0a0a0f;
     color: #c8c8d4;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Rajdhani', system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
     overflow: hidden;
     height: 100vh;
     width: 100vw;
@@ -47,7 +49,9 @@
   }
 
   .system-header {
-    @apply font-mono text-system-gold text-xs tracking-widest uppercase;
+    @apply text-system-gold text-xs tracking-widest uppercase;
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
     border-bottom: 1px solid #1e1e2e;
     padding: 6px 12px;
     background: rgba(200, 169, 81, 0.05);
@@ -69,15 +73,16 @@
   .narrative-text {
     @apply font-sans text-system-text leading-relaxed;
     font-size: 0.9rem;
+    font-weight: 400;
+    color: #b8bcd0;
   }
 
   .system-block {
     @apply font-mono text-xs;
     border-left: 2px solid #4A90D9;
-    padding-left: 12px;
-    margin: 8px 0;
+    margin: 10px 0;
     background: rgba(74, 144, 217, 0.04);
-    padding: 8px 12px;
+    padding: 8px 14px;
   }
 
   .system-block-gold {
@@ -161,6 +166,15 @@
   .tab-active {
     border-bottom: 2px solid #4A90D9;
     color: #4A90D9;
+  }
+
+  /* ── Floating notification animation ─────────────────────────────────── */
+  @keyframes floatUp {
+    0%   { opacity: 0;   transform: translateX(-50%) translateY(0px)   scale(0.8); }
+    15%  { opacity: 1;   transform: translateX(-50%) translateY(-10px)  scale(1.05); }
+    30%  { opacity: 1;   transform: translateX(-50%) translateY(-22px)  scale(1); }
+    80%  { opacity: 0.9; transform: translateX(-50%) translateY(-48px)  scale(1); }
+    100% { opacity: 0;   transform: translateX(-50%) translateY(-72px)  scale(0.95); }
   }
 
   /* ── Level up shimmer ─────────────────────────────────────────────────── */

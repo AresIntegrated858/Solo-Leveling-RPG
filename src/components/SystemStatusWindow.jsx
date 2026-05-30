@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import MiniMap from './MiniMap';
+import HunterIDCard from './HunterIDCard';
 
 function StatBar({ value, max, color = 'bg-system-blue', label }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
@@ -55,7 +56,7 @@ function Badge({ text, variant = 'blue' }) {
   );
 }
 
-export default function SystemStatusWindow({ playerState, sessionMeta, sessionStartTime }) {
+export default function SystemStatusWindow({ playerState, sessionMeta, sessionStartTime, dailyQuests }) {
   const p = playerState;
   const [currentCoords, setCurrentCoords] = useState(p.currentCoords || null);
 
@@ -99,6 +100,9 @@ export default function SystemStatusWindow({ playerState, sessionMeta, sessionSt
 
       <div className="flex-1 overflow-y-auto">
 
+        {/* ── HUNTER ID CARD (portrait + identity) ──────────────────────────── */}
+        <HunterIDCard playerState={p} />
+
         {/* ── MINIMAP ──────────────────────────────────────────────────────── */}
         <div className="border-b border-system-border">
           <div className="font-mono text-[9px] text-system-text-dim tracking-widest px-3 pt-2 pb-1">
@@ -114,24 +118,8 @@ export default function SystemStatusWindow({ playerState, sessionMeta, sessionSt
 
         <div className="p-3 space-y-4">
 
-          {/* Identity */}
-          <div className="space-y-1">
-            <div className="font-mono text-base text-system-text font-medium">
-              {p.name || '—'}
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                text={`${p.rank || 'E'} RANK`}
-                variant={p.rank === 'S' ? 'gold' : p.rank === 'A' ? 'blue' : 'muted'}
-              />
-              <span className="font-mono text-xs text-system-text-dim">
-                Lv. <span className="text-system-blue">{p.level || 1}</span>
-              </span>
-            </div>
-          </div>
-
           {/* Vital bars */}
-          <div className="space-y-2 border-t border-system-border pt-3">
+          <div className="space-y-2">
             <StatBar label="HP" value={p.hp?.current ?? 100} max={p.hp?.max ?? 100} color="bg-system-red" />
             <StatBar label="MP" value={p.mp?.current ?? 50} max={p.mp?.max ?? 50} color="bg-system-blue" />
             <StatBar label="STAMINA" value={p.stamina?.current ?? 100} max={p.stamina?.max ?? 100} color="bg-system-green" />
@@ -155,6 +143,22 @@ export default function SystemStatusWindow({ playerState, sessionMeta, sessionSt
                 />
               </div>
             </div>
+
+            {/* Daily Quest status indicator */}
+            {dailyQuests?.tasks?.length > 0 && (() => {
+              const completed = dailyQuests.tasks.filter((t) => t.completed).length;
+              const total = dailyQuests.tasks.length;
+              const allDone = dailyQuests.allComplete || completed === total;
+              const penalty = dailyQuests.penaltyActive;
+              const color = penalty ? '#E05252' : allDone ? '#4abe8a' : '#4A90D9';
+              const label = penalty ? '⚠ PENALTY ZONE' : allDone ? '✓ DAILY COMPLETE' : `DAILY  ${completed}/${total}`;
+              return (
+                <div className="flex justify-between items-center py-[2px]">
+                  <span className="font-mono text-[9px] text-system-text-dim">DAILY</span>
+                  <span className="font-mono text-[9px]" style={{ color }}>{label}</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Core stats */}

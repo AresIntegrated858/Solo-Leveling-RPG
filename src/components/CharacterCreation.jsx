@@ -21,7 +21,7 @@ export default function CharacterCreation({ apiKey, onComplete }) {
   const [error, setError] = useState('');
   const [bgOpacity, setBgOpacity] = useState(0);
   const inputRef = useRef(null);
-  const { send } = useClaudeAPI();
+  const { send, generateImage } = useClaudeAPI();
   const audio = useAmbientAudio();
 
   // Fade in background on mount
@@ -74,8 +74,21 @@ export default function CharacterCreation({ apiKey, onComplete }) {
     }
   };
 
+  // ── Portrait generator ─────────────────────────────────────────────────────
+  // One-shot Claude call. Asks for a Solo-Leveling-style ASCII/Unicode portrait
+  // bounded to the System aesthetic — high contrast, monospace-clean, head-and-
+  // shoulders bust. Extracts the first fenced code block from the response so
+  // any preamble or commentary is stripped automatically.
+  // Generates a Hunter ID portrait using DALL-E 3.
+  // Returns a base64 data URL (data:image/png;base64,...) ready to drop into an <img> tag.
+  const generatePortrait = async (name, appearance) => {
+    const prompt = `Solo Leveling anime/manhwa style Hunter ID card portrait of a character named ${name}. Head and shoulders bust, centered in frame, face filling most of the image. Physical appearance: ${appearance}. Art direction: match the official Solo Leveling anime adaptation aesthetic — cel-shaded illustration, cold and intense expression, sharp angular face, dark cinematic background with deep blue-purple atmospheric shadow and subtle rim lighting. Glowing or intense eyes. High contrast with strong shadows carved into the face. The mood is serious, dangerous, and solitary — a lone hunter who levels in silence. Clean portrait composition, no text, no UI overlays, no watermarks. Shoulders visible at the bottom of the frame.`;
+
+    return await generateImage({ apiKey, prompt });
+  };
+
   const generateInitialState = async (finalAnswers) => {
-    setStep(TOTAL + 1);   // step 15 — past all questions, triggers generating screen
+    setStep(TOTAL + 1);   // past all questions — triggers generating screen
     setIsGenerating(true);
 
     try {
@@ -91,6 +104,27 @@ export default function CharacterCreation({ apiKey, onComplete }) {
       const hometown = finalAnswers.q14 || '';
       const hometownCoords = hometown ? await geocodeLocation(hometown) : null;
 
+      // ── Portrait generation (q15 → ASCII/Unicode art) ──────────────────────
+      // Generated FIRST so it's persisted with the player's initial state save.
+      // Failures here are non-fatal — the Hunter ID Card falls back to a
+      // placeholder if portrait is empty.
+      let portrait = '';
+      const appearance = (finalAnswers.q15 || '').trim();
+      if (appearance) {
+        let dots = '';
+        const portraitDots = setInterval(() => {
+          dots = dots.length >= 3 ? '' : dots + '.';
+          setGeneratingText(`Rendering Hunter portrait${dots}`);
+        }, 400);
+        try {
+          portrait = await generatePortrait(finalAnswers.q1 || 'Hunter', appearance);
+        } catch (pErr) {
+          console.warn('Portrait generation failed:', pErr);
+        } finally {
+          clearInterval(portraitDots);
+        }
+      }
+
       await savePlayerState({
         ...DEFAULT_PLAYER_STATE,
         name: finalAnswers.q1 || '',
@@ -98,6 +132,8 @@ export default function CharacterCreation({ apiKey, onComplete }) {
         hometown,
         hometownCoords,
         currentCoords: hometownCoords,
+        appearance,
+        portrait,
       });
 
       const initUserMessage = buildCharacterCreationMessage(finalAnswers);
@@ -123,13 +159,18 @@ export default function CharacterCreation({ apiKey, onComplete }) {
       await saveConversationHistory(initialHistory);
 
       setTimeout(() => {
-        onComplete(finalAnswers, initialHistory, response);
+        onComplete(finalAnswers, initialHistory, response, { portrait, appearance });
       }, 3000);
 
     } catch (err) {
-      setError(err.message || 'Failed to initialize simulation. Check your API key.');
+      const msg = err.message || '';
+      const isOverloaded = msg.includes('529') || msg.toLowerCase().includes('overloaded');
+      setError(isOverloaded
+        ? 'Servers are overloaded. Click RETRY to try again.'
+        : msg || 'Failed to initialize simulation. Check your API key.');
       setIsGenerating(false);
-      setStep(TOTAL);
+      setGeneratingText('');
+      // Stay on generating screen (step > TOTAL) so the RETRY button is visible
     }
   };
 
@@ -208,7 +249,12 @@ export default function CharacterCreation({ apiKey, onComplete }) {
             <div className="system-block system-block-red p-3">
               <div className="font-mono text-xs text-system-red">{error}</div>
               <button
-                onClick={() => { setError(''); generateInitialState(answers); }}
+                onClick={() => {
+                  setError('');
+                  setGeneratingText('');
+                  setIsGenerating(true);
+                  generateInitialState(answers);
+                }}
                 className="btn-danger mt-2 text-xs px-3 py-1"
               >RETRY</button>
             </div>
